@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>T1 即时问卷</title>
+  <style>
+    :root{
+      --bg:#f6f7fb;
+      --card:#ffffff;
+      --text:#111;
+      --muted:#555;
+      --line:#e9e9ef;
+      --primary:#1e66ff;
+      --chip:#fafbff;
+      --danger:#d93025;
+      --radius:16px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+      padding:32px 18px;
+    }
+    .wrap{max-width:980px;margin:0 auto}
+    .card{
+      background:var(--card);
+      border-radius:var(--radius);
+      box-shadow:0 10px 30px rgba(0,0,0,.06);
+      padding:26px 26px 18px;
+    }
+    h1{margin:0 0 10px;font-size:40px;letter-spacing:.2px}
+    .sub{margin:0 0 18px;color:var(--muted);line-height:1.6}
+    .pid{font-weight:800}
+    .hint{
+      margin:10px 0 18px;
+      padding:12px 14px;
+      border:1px solid var(--line);
+      background:#fcfcff;
+      border-radius:12px;
+      color:#333;
+      font-size:14px;
+      line-height:1.6;
+    }
+
+    .section{
+      margin-top:18px;
+      padding-top:14px;
+      border-top:1px dashed var(--line);
+    }
+    .section h2{
+      margin:0 0 12px;
+      font-size:18px;
+      color:#222;
+    }
+    .q{
+      margin:14px 0;
+      padding:14px 14px 12px;
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:#fff;
+    }
+    .qtitle{
+      margin:0 0 10px;
+      font-weight:800;
+      line-height:1.5;
+    }
+    .req{color:var(--danger);font-weight:800;margin-left:6px}
+    .scale{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+    }
+    .opt{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      border:1px solid #d8dbe6;
+      background:var(--chip);
+      padding:8px 12px;
+      border-radius:999px;
+      cursor:pointer;
+      user-select:none;
+      transition:.15s;
+    }
+    .opt:hover{border-color:#b8c6ff}
+    input[type="radio"]{transform:scale(1.1)}
+    .anchors{
+      display:flex;
+      justify-content:space-between;
+      color:#666;
+      font-size:12.5px;
+      margin-top:8px;
+      padding:0 4px;
+    }
+
+    .actions{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      margin-top:18px;
+      padding-top:14px;
+      border-top:1px solid var(--line);
+    }
+    .btn{
+      appearance:none;
+      border:none;
+      background:var(--primary);
+      color:#fff;
+      padding:12px 16px;
+      border-radius:12px;
+      font-size:16px;
+      font-weight:700;
+      cursor:pointer;
+    }
+    .btn:disabled{opacity:.55;cursor:not-allowed}
+    .mini{color:#666;font-size:13px;line-height:1.5}
+    .errbox{
+      display:none;
+      margin-top:12px;
+      padding:12px 14px;
+      border:1px solid #ffd6d6;
+      background:#fff5f5;
+      color:#7a1f1f;
+      border-radius:12px;
+      line-height:1.55;
+      font-size:14px;
+    }
+    .footer{
+      margin-top:10px;
+      color:#777;
+      font-size:12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Page 6｜T1 即时问卷 ✅</h1>
+      <p class="sub">participant_id：<span class="pid">{{ participant_id }}</span></p>
+
+      <div class="hint">
+        请根据你刚刚的体验作答。除非题目另有说明，量表为 <b>1（非常不同意）</b> 到 <b>7（非常同意）</b>。
+        所有题目均为必填。
+      </div>
+
+      <form method="POST" action="/t1?pid={{ participant_id }}" id="t1Form">
+
+        <!-- Triggered Interest (3) -->
+        <div class="section">
+          <h2>一、触发兴趣（Triggered Interest）</h2>
+
+          <div class="q">
+            <p class="qtitle">TI1. 我对本次话题产生了兴趣<span class="req">*</span></p>
+            <div class="scale">
+              {% for v in range(1,8) %}
+                <label class="opt"><input type="radio" name="ti1" value="{{ v }}" required> {{ v }}</label>
+              {% endfor %}
+            </div>
+            <div class="anchors"><span>非常不同意</span><span>非常同意</span></div>
+          </div>
+
+          <div class="q">
+            <p class="qtitle">TI2. 我愿意进一步了解相关内容<span class="req">*</span></p>
+            <div class="scale">
+              {% for v in range(1,8) %}
+                <label class="opt"><input type="radio" name="ti2" value="{{ v }}" required> {{ v }}</label>
+              {% endfor %}
+            </div>
+            <div class="anchors"><span>非常不同意</span><span>非常同意</span></div>
+          </div>
+
+          <div class="q">
+            <p class="qtitle">TI3. 我觉得这个话题对我有吸引力<span class="req">*</span></p>
+            <div class="scale">
+              {% for v in range(1,8) %}
+                <label class="opt"><input type="radio" name="ti3" value="{{ v }}" required> {{ v }}</label>
+              {% endfor %}
+            </div>
+            <div class="anchors"><span>非常不同意</span><span>非常同意</span></div>
+          </div>
+        </div>
+
+        <!-- Support (4) -->
+        <div class="section">
+          <h2>二、支持感知（Perceived Support）</h2>
+
+          <div class="q">
+            <p class="qtitle">S1. 我感到我得到了支持<span class="req">*</span></p>
+            <div class="scale">
+              {% for v in range(1,8) %}
+                <label class="opt"><input type="radio" name="s1" value="{{ v }}" required> {{ v }}</label>
+              {% endfor %}
+            </div>
+            <div class="anchors"><span>非常不同意</span><span>非常同意</span></div>
+          </div>
+
+          <div class="q">
+            <p class="qtitle">S2. 对话让我更有信心继续推进想法<span class="req">*</span></p>
+            <div class="scale">
+              {% for v in range(1,8) %}
+                <label class="opt"><input type="radio" name="s2" value="{{ v }}" required> {{ v }}</label>
+              {% endfor %}
+            </div>
+            <div class="anchors"><span>非常不同意</span><span>非常同意</span></div>
+          </div>
+
+          <div class="q">
+            <p class="qtitle">S3. 我觉得对话能回应我的需要<span class="req">*</span></p>
+            <div class="scale">
+              {% for v in range(1,8) %}
+                <label class="opt"><input type="radio" name="s3" value="{{ v }}" required> {{ v }}</label>
+              {% endfor %}
+            </div>
+            <div class="anchors"><span>非常不同意</span><span>非常同意</span></div>
+          </div>
+
+          <div class="q">
+            <p class="qtitle">S4. 对话让我感觉被理解<span class="req">*</span></p>
+            <div class="scale">
+              {% for v in range(1,8) %}
+                <label class="opt"><input type="radio" name="s4" value="{{ v }}" required> {{ v }}</label>
+              {% endfor %}
+            </div>
+            <div class="anchors"><span>非常不同意</span><span>非常同意</span></div>
+          </div>
+        </div>
+
+        <!-- Clarity (4) -->
+        <div class="section">
+          <h2>三、清晰感（Clarity）</h2>
+
+          <div class="q">
+            <p class="qtitle">C1. 我更清楚接下来该做什么<span class="req">*</span></p>
+            <div class="scale">
+              {% for v in range(1,8) %}
+                <label class="opt"><input type="radio" name="c1" value="{{ v }}" required> {{ v }}</label>
+              {% endfor %}
+            </div>
+            <div class="anchors"><span>非常不同意</span><span>非常同意</span></div>
+          </div>
+
+          <div class="q">
+            <p class="qtitle">C2. 我能把想法用更清晰的方式表达出来<span class="req">*</span></p>
+            <div class="scale">
+              {% for v in range(1,8) %}
+                <label class="opt"><input type="radio" name="c2" value="{{ v }}" required> {{ v }}</label>
+              {% endfor %}
+            </div>
+            <div class="anchors"><span>非常不同意</span><span>非常同意</span></div>
+          </div>
+
+          <div class="q">
+            <p class="qtitle">C3. 我对自己的目标/方向更明确了<span class="req">*</span></p>
+            <div class="scale">
+              {% for v in range(1,8) %}
+                <label class="opt"><input type="radio" name="c3" value="{{ v }}" required> {{ v }}</label>
+              {% endfor %}
+            </div>
+            <div class="anchors"><span>非常不同意</span><span>非常同意</span></div>
+          </div>
+
+          <div class="q">
+            <p class="qtitle">C4. 我觉得对话帮助我理顺了思路<span class="req">*</span></p>
+            <div class="scale">
+              {% for v in range(1,8) %}
+                <label class="opt"><input type="radio" name="c4" value="{{ v }}" required> {{ v }}</label>
+              {% endfor %}
+            </div>
+            <div class="anchors"><span>非常不同意</span><span>非常同意</span></div>
+          </div>
+        </div>
+
+        <!-- Task (3) -->
+        <div class="section">
+          <h2>四、任务体验（Task Experience）</h2>
+
+          <div class="q">
+            <p class="qtitle">TASK1. 我能完成本次对话任务的要求<span class="req">*</span></p>
+            <div class="scale">
+              {% for v in range(1,8) %}
+                <label class="opt"><input type="radio" name="task1" value="{{ v }}" required> {{ v }}</label>
+              {% endfor %}
+            </div>
+            <div class="anchors"><span>非常不同意</span><span>非常同意</span></div>
+          </div>
+
+          <div class="q">
+            <p class="qtitle">TASK2. 我在完成任务过程中投入了努力<span class="req">*</span></p>
+            <div class="scale">
+              {% for v in range(1,8) %}
+                <label class="opt"><input type="radio" name="task2" value="{{ v }}" required> {{ v }}</label>
+              {% endfor %}
+            </div>
+            <div class="anchors"><span>非常不同意</span><span>非常同意</span></div>
+          </div>
+
+          <div class="q">
+            <p class="qtitle">TASK3. 我认为本次任务对我来说是有意义的<span class="req">*</span></p>
+            <div class="scale">
+              {% for v in range(1,8) %}
+                <label class="opt"><input type="radio" name="task3" value="{{ v }}" required> {{ v }}</label>
+              {% endfor %}
+            </div>
+            <div class="anchors"><span>非常不同意</span><span>非常同意</span></div>
+          </div>
+        </div>
+
+        <!-- Affect (3) -->
+        <div class="section">
+          <h2>五、情绪体验（Affect）</h2>
+
+          <div class="q">
+            <p class="qtitle">AFF1. 我在对话过程中感到积极/愉快<span class="req">*</span></p>
+            <div class="scale">
+              {% for v in range(1,8) %}
+                <label class="opt"><input type="radio" name="aff1" value="{{ v }}" required> {{ v }}</label>
+              {% endfor %}
+            </div>
+            <div class="anchors"><span>非常不同意</span><span>非常同意</span></div>
+          </div>
+
+          <div class="q">
+            <p class="qtitle">AFF2. 我在对话过程中感到焦虑/紧张<span class="req">*</span></p>
+            <div class="scale">
+              {% for v in range(1,8) %}
+                <label class="opt"><input type="radio" name="aff2" value="{{ v }}" required> {{ v }}</label>
+              {% endfor %}
+            </div>
+            <div class="anchors"><span>非常不同意</span><span>非常同意</span></div>
+            <div class="footer">（提示：若后续分析需要把“焦虑”为负向项，可在统计时反向计分。）</div>
+          </div>
+
+          <div class="q">
+            <p class="qtitle">AFF3. 我在对话过程中感到被激励/有动力<span class="req">*</span></p>
+            <div class="scale">
+              {% for v in range(1,8) %}
+                <label class="opt"><input type="radio" name="aff3" value="{{ v }}" required> {{ v }}</label>
+              {% endfor %}
+            </div>
+            <div class="anchors"><span>非常不同意</span><span>非常同意</span></div>
+          </div>
+        </div>
+
+        <!-- Manipulation checks (2) -->
+        <div class="section">
+          <h2>六、操纵检查（Manipulation Check）</h2>
+
+          <div class="q">
+            <p class="qtitle">MPLAN. 在正式对话前，我有进行明确的写作/任务规划（例如：目标、受众/情境、要素、输出形式）<span class="req">*</span></p>
+            <div class="scale">
+              {% for v in range(1,8) %}
+                <label class="opt"><input type="radio" name="mplan" value="{{ v }}" required> {{ v }}</label>
+              {% endfor %}
+            </div>
+            <div class="anchors"><span>非常不同意</span><span>非常同意</span></div>
+          </div>
+
+          <div class="q">
+            <p class="qtitle">MFB. 对话反馈更偏向“聚焦建议/可执行步骤”，而不是泛泛鼓励<span class="req">*</span></p>
+            <div class="scale">
+              {% for v in range(1,8) %}
+                <label class="opt"><input type="radio" name="mfb" value="{{ v }}" required> {{ v }}</label>
+              {% endfor %}
+            </div>
+            <div class="anchors"><span>非常不同意</span><span>非常同意</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn" type="submit" id="submitBtn">提交并完成 T1</button>
+          <div class="mini">
+            提交后将进入下一步。若有未作答题目，将提示你补全。
+          </div>
+        </div>
+
+        <div class="errbox" id="errBox"></div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // 简单前端校验：没填会提示第一个缺失题
+    const form = document.getElementById("t1Form");
+    const errBox = document.getElementById("errBox");
+    form.addEventListener("submit", (e) => {
+      errBox.style.display = "none";
+      errBox.textContent = "";
+
+      // 找到第一个未勾选的 required radio group
+      const requiredNames = new Set();
+      form.querySelectorAll('input[type="radio"][required]').forEach(r => requiredNames.add(r.name));
+
+      for (const name of requiredNames) {
+        const anyChecked = !!form.querySelector(`input[name="${name}"]:checked`);
+        if (!anyChecked) {
+          e.preventDefault();
+          errBox.style.display = "block";
+          errBox.textContent = `你还有题目未作答：请完成 ${name.toUpperCase()}（标*的必填）。`;
+          // 滚动到该题附近
+          const el = form.querySelector(`input[name="${name}"]`);
+          if (el) el.scrollIntoView({behavior:"smooth", block:"center"});
+          return;
+        }
+      }
+    });
+  </script>
+</body>
+</html>

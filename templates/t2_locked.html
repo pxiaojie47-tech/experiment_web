@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>T2 未到时间</title>
+  <style>
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,"PingFang SC","Microsoft YaHei",sans-serif;
+         background:#f6f7fb;margin:0;padding:40px;color:#111}
+    .card{max-width:860px;margin:0 auto;background:#fff;border-radius:16px;padding:26px;box-shadow:0 10px 30px rgba(0,0,0,.06)}
+    h1{margin:0 0 10px;font-size:34px}
+    p{margin:10px 0;color:#444;line-height:1.6}
+    .muted{color:#666;font-size:13px}
+    .box{margin-top:12px;padding:12px 14px;border:1px solid #e8eaf3;border-radius:12px;background:#fbfbfe}
+    a{display:inline-block;margin-top:14px;padding:10px 14px;border-radius:12px;background:#1e66ff;color:#fff;text-decoration:none}
+    code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Page 8｜T2 尚未开放 ⏳</h1>
+    <p>participant_id：<b>{{ participant_id }}</b></p>
+    <p class="muted">T2 是延迟测验，需要在完成 T1 后 <b>7 天</b> 才能填写。</p>
+
+    <div class="box">
+      <div><b>预计开放时间（UTC）</b>：</div>
+      <div><code>{{ eligible_at }}</code></div>
+    </div>
+
+    <p class="muted">请在到达开放时间后，再通过同一链接进入。</p>
+
+    <a href="/chat?pid={{ participant_id }}">返回对话页</a>
+  </div>
+</body>
+</html>

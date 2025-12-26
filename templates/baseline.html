@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Page 1｜背景信息（基线）</title>
+  <style>
+    body { font-family: system-ui, -apple-system; padding: 24px; line-height: 1.7; }
+    .card { max-width: 760px; border: 1px solid #ddd; border-radius: 12px; padding: 18px; }
+    label { display:block; margin-top: 12px; font-weight: 600; }
+    input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 10px; margin-top: 6px; }
+    button { margin-top: 16px; padding: 10px 14px; border-radius: 10px; border: 1px solid #ccc; cursor: pointer; }
+    .muted { color:#666; font-size: 14px; }
+    #msg { margin-top: 12px; white-space: pre-wrap; background: #f6f6f6; padding: 12px; border-radius: 10px; display:none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Page 1｜背景信息（基线）</h1>
+    <p class="muted">请按实际情况填写。带 * 为必填。</p>
+
+    <form id="form">
+      <input type="hidden" id="pid" value="{{ participant_id }}" />
+
+      <label>年级/专业方向 *</label>
+      <input id="grade_major" placeholder="例如：大三 / 视觉传达" required />
+
+      <label>文化设计课程经历 *</label>
+      <select id="course_experience" required>
+        <option value="" selected disabled>请选择</option>
+        <option value="1">1（完全没有）</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5（非常丰富）</option>
+      </select>
+
+      <label>Chatbot 使用经验（频率/熟悉度）*</label>
+      <select id="chatbot_experience" required>
+        <option value="" selected disabled>请选择</option>
+        <option value="1">1（几乎不用）</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5（经常使用）</option>
+      </select>
+
+      <label>（可选）最近一周工作量/压力</label>
+      <select id="stress_1w">
+        <option value="" selected>不填</option>
+        <option value="1">1（很低）</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+        <option value="7">7（很高）</option>
+      </select>
+
+      <button type="submit">提交并进入下一步</button>
+    </form>
+
+    <div id="msg"></div>
+  </div>
+
+  <script>
+    const form = document.getElementById("form");
+    const msg = document.getElementById("msg");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      msg.style.display = "block";
+      msg.textContent = "正在提交…";
+
+      const payload = {
+        participant_id: document.getElementById("pid").value,
+        grade_major: document.getElementById("grade_major").value.trim(),
+        course_experience: document.getElementById("course_experience").value,
+        chatbot_experience: document.getElementById("chatbot_experience").value,
+        stress_1w: document.getElementById("stress_1w").value
+      };
+
+      if (!payload.grade_major || !payload.course_experience || !payload.chatbot_experience) {
+        msg.textContent = "请完成所有必填项（带 *）。";
+        return;
+      }
+
+      const res = await fetch("/api/baseline", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        msg.textContent = "提交失败：\n" + JSON.stringify(data, null, 2);
+        return;
+      }
+
+      msg.textContent = "提交成功 ✅ 2 秒后进入 Page 2…";
+      setTimeout(() => {
+        window.location.href = "/material?pid=" + encodeURIComponent(payload.participant_id);
+      }, 2000);
+    });
+  </script>
+</body>
+</html>

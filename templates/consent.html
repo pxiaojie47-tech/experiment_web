@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>研究说明与同意</title>
+  <style>
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",Arial,sans-serif;background:#f6f7f9;margin:0}
+    .wrap{max-width:980px;margin:48px auto;padding:0 16px}
+    .card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:40px}
+    h1{margin:0 0 18px;font-size:48px;letter-spacing:1px}
+    p{font-size:20px;line-height:1.9;margin:18px 0;color:#111827}
+    .row{display:flex;align-items:center;gap:16px;margin-top:26px;flex-wrap:wrap}
+    button{font-size:20px;padding:14px 26px;border-radius:12px;border:2px solid #2563eb;background:#fff;color:#2563eb;cursor:pointer}
+    button:hover{background:#2563eb;color:#fff}
+    .hint{color:#6b7280;font-size:14px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>研究说明与同意</h1>
+
+      <p>你将参与一项关于对话式学习支持的研究。整个流程约 <b>12–15 分钟</b>（包含对话任务与问卷）。</p>
+      <p>你可以在任何时间退出实验。所有数据将匿名收集，仅用于学术研究分析。</p>
+      <p>点击下方“同意并开始”按钮，即表示你已阅读以上说明并同意参与本研究。</p>
+
+      <div class="row">
+        <form method="POST" action="/consent" style="margin:0">
+          <button type="submit">同意并开始</button>
+        </form>
+        <span class="hint">（系统将生成 participant_id 并记录同意时间）</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+

@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>材料选择</title>
+  <style>
+    :root{
+      --bg:#f6f7fb; --card:#fff; --text:#111; --muted:#555; --line:#e9e9ef;
+      --primary:#1e66ff; --danger:#d93025;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; background:var(--bg); color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+      padding:28px 16px;
+    }
+    .wrap{max-width:1050px;margin:0 auto}
+    .card{
+      background:var(--card); border-radius:16px; padding:20px 20px 16px;
+      box-shadow:0 10px 30px rgba(0,0,0,.06);
+    }
+    h1{margin:0 0 10px;font-size:36px}
+    .sub{margin:0 0 14px;color:var(--muted);line-height:1.65}
+    .pid{font-weight:800}
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(4, 1fr);
+      gap:12px;
+      margin-top:14px;
+    }
+    @media (max-width:1000px){ .grid{grid-template-columns:repeat(2, 1fr);} }
+    @media (max-width:560px){ .grid{grid-template-columns:1fr;} }
+
+    .item{
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:#fff;
+      padding:12px;
+      cursor:pointer;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      transition:transform .05s ease, border-color .1s ease;
+      min-height:280px;
+    }
+    .item:hover{border-color:#b8c6ff; transform:translateY(-1px)}
+    .thumb{
+      width:100%;
+      height:150px;
+      border-radius:12px;
+      background:#f1f3ff;
+      overflow:hidden;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .thumb img{width:100%;height:100%;object-fit:cover}
+    .title{font-weight:900; font-size:16px; line-height:1.4}
+    .desc{color:#555; font-size:13px; line-height:1.55}
+    .tag{display:inline-block;font-size:12px;color:#2a3a8c;background:#eef2ff;border:1px solid #dfe6ff;padding:4px 8px;border-radius:999px}
+    .row{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:12px;border-top:1px solid var(--line);padding-top:12px}
+    .btn{
+      border:none;background:var(--primary);color:#fff;
+      padding:10px 14px;border-radius:12px;font-weight:800;cursor:pointer;
+    }
+    .btn:disabled{opacity:.55;cursor:not-allowed}
+    .status{color:#666;font-size:13px;line-height:1.5}
+    .err{
+      display:none;margin-top:12px;padding:12px 14px;border:1px solid #ffd6d6;background:#fff5f5;
+      color:#7a1f1f;border-radius:12px;line-height:1.55;font-size:14px;
+    }
+    .note{color:#666;font-size:13px;margin-top:10px;line-height:1.6}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Page 3｜材料选择 ✅</h1>
+      <p class="sub">
+        participant_id：<span class="pid" id="pid">{{ participant_id }}</span><br/>
+        请从下列 8 组材料中选择 <b>最感兴趣的一组</b>（点击卡片即可）。选择后将自动进入下一步。
+      </p>
+
+      <div class="grid" id="grid"></div>
+
+      <div class="row">
+        <button class="btn" id="skipBtn" type="button" disabled>正在提交…</button>
+        <div class="status" id="status">请选择一组材料。</div>
+      </div>
+
+      <div class="err" id="errBox"></div>
+      <div class="note">提示：选择后会记录你的反应时（从页面打开到点击选择的毫秒数）。</div>
+    </div>
+  </div>
+
+  <script>
+    const participant_id = document.getElementById("pid").textContent.trim();
+    const grid = document.getElementById("grid");
+    const statusEl = document.getElementById("status");
+    const errBox = document.getElementById("errBox");
+    const skipBtn = document.getElementById("skipBtn");
+
+    // 记录页面进入时间，用于 RT
+    const pageStart = performance.now();
+    const pageTimeISO = new Date().toISOString();
+
+    // 8个材料（与你 static/materials 文件名一致）
+    const items = [
+      { key:"bronze",   label:"青铜纹样",      img:"/static/materials/bronze_01.jpg",
+        desc:"以器物纹样/形制为灵感，适合做结构化、秩序感、历史厚重的表达。", tag:"器物/纹样" },
+      { key:"chibi_drum", label:"鼓乐/乐舞",    img:"/static/materials/chibi_drum_01.jpg",
+        desc:"以节奏、动作、仪式感为线索，适合做动态叙事与氛围营造。", tag:"节奏/动作" },
+      { key:"chu_ritual", label:"楚礼仪/祭祀",  img:"/static/materials/chu_ritual_01.jpg",
+        desc:"以仪式、场域与象征体系为核心，适合做沉浸式体验与场景设计。", tag:"仪式/场景" },
+      { key:"han_embroidery", label:"汉绣/刺绣", img:"/static/materials/han_embroidery_01.jpg",
+        desc:"以线、色、纹样与工艺细节为主，适合做细腻、温度感与手作叙事。", tag:"工艺/纹样" },
+      { key:"lianghu_literature", label:"两湖文学意象", img:"/static/materials/lianghu_literature_01.jpg",
+        desc:"以地域诗性表达与意象组合为主，适合做概念化、情绪化、文本驱动设计。", tag:"意象/文本" },
+      { key:"qianjiang_woodcarving", label:"潜江木雕", img:"/static/materials/qianjiang_woodcarving_01.jpg",
+        desc:"以刀法、层次与材质感为主，适合做立体构成与触觉导向的表达。", tag:"材质/雕刻" },
+      { key:"tujia_brocade", label:"土家织锦", img:"/static/materials/tujia_brocade_01.jpg",
+        desc:"以几何纹样与色彩系统为主，适合做图形系统、界面纹理与视觉识别。", tag:"图形/色彩" },
+      { key:"yangxin_applique", label:"阳新布贴", img:"/static/materials/yangxin_applique_01.jpg",
+        desc:"以拼贴、图形化叙事为主，适合做故事化视觉、角色/符号与模块化构成。", tag:"拼贴/叙事" },
+    ];
+
+    let submitting = false;
+
+    function showErr(msg){
+      errBox.style.display = "block";
+      errBox.textContent = msg;
+    }
+    function clearErr(){
+      errBox.style.display = "none";
+      errBox.textContent = "";
+    }
+
+    function setStatus(msg){
+      statusEl.textContent = msg;
+    }
+
+    async function choose(item){
+      if (submitting) return;
+      submitting = true;
+      clearErr();
+
+      // RT
+      const rt_ms = Math.round(performance.now() - pageStart);
+
+      setStatus(`正在提交：${item.label} …`);
+      skipBtn.disabled = true;
+      skipBtn.textContent = "正在提交…";
+
+      try{
+        const res = await fetch("/api/material_choice", {
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify({
+            participant_id,
+            choice: item.key,
+            label: item.label,
+            page_time: pageTimeISO,
+            rt_ms
+          })
+        });
+
+        const data = await res.json();
+        if (!data.ok){
+          submitting = false;
+          showErr("提交失败：" + (data.error || "unknown"));
+          setStatus("提交失败，请重试。");
+          skipBtn.disabled = true;
+          skipBtn.textContent = "正在提交…";
+          return;
+        }
+
+        // ✅ 成功后：统一走 /planning（pre组显示planning；none组自动跳chat）
+        setStatus("提交成功，进入下一步…");
+        window.location.href = "/planning?pid=" + encodeURIComponent(participant_id);
+
+      }catch(e){
+        submitting = false;
+        showErr("网络错误：" + e);
+        setStatus("网络错误，请重试。");
+        skipBtn.disabled = true;
+        skipBtn.textContent = "正在提交…";
+      }
+    }
+
+    // 渲染卡片
+    items.forEach(item=>{
+      const div = document.createElement("div");
+      div.className = "item";
+      div.innerHTML = `
+        <div class="thumb"><img src="${item.img}" alt="${item.label}"></div>
+        <div>
+          <div class="tag">${item.tag}</div>
+          <div class="title">${item.label}</div>
+          <div class="desc">${item.desc}</div>
+        </div>
+      `;
+      div.addEventListener("click", ()=>choose(item));
+      grid.appendChild(div);
+    });
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>对话页</title>
+  <style>
+    :root{
+      --bg:#f6f7fb;
+      --card:#ffffff;
+      --text:#111;
+      --muted:#6b7280;
+      --line:#e7e9f3;
+      --primary:#1e66ff;
+      --primary-weak:#e9f0ff;
+      --bubble:#ffffff;
+      --bubble2:#f7f8fc;
+      --shadow:0 10px 30px rgba(0,0,0,.06);
+      --radius:16px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      padding:26px;
+      background:var(--bg);
+      color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,"PingFang SC","Microsoft YaHei",sans-serif;
+    }
+    .wrap{
+      max-width:1100px;
+      margin:0 auto;
+      background:var(--card);
+      border-radius:20px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      border:1px solid var(--line);
+    }
+    .topbar{
+      padding:18px 22px;
+      border-bottom:1px solid var(--line);
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:14px;
+    }
+    .title{
+      font-size:26px;
+      font-weight:800;
+      margin:0 0 6px;
+    }
+    .meta{
+      font-size:14px;
+      color:var(--muted);
+      line-height:1.5;
+    }
+    .meta code{
+      font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+      background:#f2f3f7;
+      padding:2px 6px;
+      border-radius:8px;
+      color:#333;
+    }
+    .rightbox{
+      display:flex;
+      align-items:flex-start;
+      gap:12px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .pill{
+      padding:10px 12px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      color:#334155;
+      background:#fff;
+      font-size:13px;
+      white-space:nowrap;
+    }
+    .btn{
+      border:none;
+      border-radius:12px;
+      padding:11px 14px;
+      font-weight:700;
+      cursor:pointer;
+      background:var(--primary);
+      color:#fff;
+      white-space:nowrap;
+    }
+    .btn:disabled{
+      opacity:.55;
+      cursor:not-allowed;
+    }
+
+    .main{
+      display:flex;
+      gap:16px;
+      padding:18px;
+      min-height:70vh;
+    }
+    .chat{
+      flex:1;
+      border:1px solid var(--line);
+      border-radius:18px;
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      background:#fff;
+    }
+    .log{
+      flex:1;
+      padding:16px 14px;
+      overflow:auto;
+      background:linear-gradient(#fff, #fff);
+    }
+    .row{
+      display:flex;
+      margin:10px 0;
+      gap:10px;
+      align-items:flex-end;
+    }
+    .row.assistant{justify-content:flex-start}
+    .row.user{justify-content:flex-end}
+    .bubble{
+      max-width:min(760px, 90%);
+      padding:14px 16px;
+      border-radius:18px;
+      border:1px solid var(--line);
+      background:var(--bubble);
+      white-space:pre-wrap;
+      line-height:1.55;
+      font-size:16px;
+    }
+    .user .bubble{
+      background:var(--primary-weak);
+      border-color:#cfe0ff;
+    }
+    .tag{
+      font-size:12px;
+      color:#64748b;
+      padding:6px 10px;
+      border:1px solid var(--line);
+      border-radius:999px;
+      background:#fff;
+    }
+
+    .composer{
+      border-top:1px solid var(--line);
+      padding:12px;
+      display:flex;
+      gap:10px;
+      align-items:flex-end;
+      background:#fff;
+    }
+    textarea{
+      flex:1;
+      resize:none;
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:12px 12px;
+      font-size:15px;
+      line-height:1.4;
+      outline:none;
+      min-height:44px;
+      max-height:120px;
+    }
+    .send{
+      background:var(--primary);
+      color:#fff;
+      border:none;
+      border-radius:14px;
+      padding:12px 16px;
+      font-weight:800;
+      cursor:pointer;
+    }
+    .send:disabled{
+      opacity:.55;
+      cursor:not-allowed;
+    }
+
+    .side{
+      width:300px;
+      flex:0 0 300px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+    .panel{
+      border:1px solid var(--line);
+      border-radius:18px;
+      background:#fff;
+      padding:14px;
+    }
+    .panel h3{
+      margin:0 0 10px;
+      font-size:14px;
+      color:#0f172a;
+    }
+    .chips{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+    }
+    .chip{
+      border:1px solid #cfe0ff;
+      background:var(--primary-weak);
+      color:#1f3b7a;
+      border-radius:16px;
+      padding:10px 12px;
+      cursor:pointer;
+      font-weight:700;
+      font-size:14px;
+    }
+    .chip:disabled{opacity:.6; cursor:not-allowed}
+    .hint{
+      font-size:13px;
+      color:var(--muted);
+      line-height:1.5;
+    }
+    .ok{
+      display:inline-block;
+      padding:8px 10px;
+      border-radius:12px;
+      background:#eefaf0;
+      border:1px solid #c9f0cf;
+      color:#14532d;
+      font-size:13px;
+      font-weight:700;
+    }
+    .warn{
+      display:inline-block;
+      padding:8px 10px;
+      border-radius:12px;
+      background:#fff7ed;
+      border:1px solid #fed7aa;
+      color:#7c2d12;
+      font-size:13px;
+      font-weight:700;
+    }
+    .sys{
+      color:#7c2d12;
+      background:#fff7ed;
+      border-color:#fed7aa;
+    }
+    .muted{
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    @media (max-width: 980px){
+      .main{flex-direction:column}
+      .side{width:auto; flex:1 1 auto}
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div>
+        <div class="title">Page 5 ｜ 对话页 ✅</div>
+        <div class="meta">
+          participant_id: <code id="pid">{{ participant_id }}</code><br/>
+          condition: planning=<code>{{ planning_cond }}</code> · feedback=<code>{{ feedback_cond }}</code>
+        </div>
+      </div>
+
+      <div class="rightbox">
+        <div class="pill">当前轮次：<b id="turn">{{ user_turns }}</b> / <b id="maxTurns">20</b></div>
+        <button class="btn" id="finishBtn" disabled>结束并进入 T1</button>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="chat">
+        <div class="log" id="log"></div>
+
+        <div class="composer">
+          <textarea id="text" placeholder="输入一句话…（Enter 发送，Shift+Enter 换行）"></textarea>
+          <button class="send" id="sendBtn">发送</button>
+        </div>
+      </div>
+
+      <div class="side">
+        <div class="panel">
+          <h3>快捷选项</h3>
+          <div class="chips">
+            <button class="chip" data-text="载体">载体</button>
+            <button class="chip" data-text="文化元素">文化元素</button>
+            <button class="chip" data-text="故事氛围">故事/氛围</button>
+            <button class="chip" data-text="符号颜色">符号/颜色</button>
+          </div>
+          <div style="height:10px"></div>
+          <div class="hint" id="finishHint"></div>
+          <div style="height:8px"></div>
+          <div id="statusBadge"></div>
+        </div>
+
+        <div class="panel">
+          <h3>说明</h3>
+          <div class="hint">
+            - 达到 <b>10</b> 轮后即可进入 T1（但仍可继续聊到 20 轮）。<br/>
+            - 若已到 20 轮，系统会停止继续发送，但你仍可进入 T1。<br/>
+            - 若看到系统错误，请把终端 traceback 截图发我。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  // ====== 可调参数（与你后端保持一致）======
+  const MAX_TURNS = 20;          // 后端最大轮数
+  const T1_THRESHOLD = 10;       // 进入 T1 门槛（仍是 10）
+  document.getElementById("maxTurns").textContent = String(MAX_TURNS);
+
+  const pid = document.getElementById("pid").textContent.trim();
+  const log = document.getElementById("log");
+  const sendBtn = document.getElementById("sendBtn");
+  const finishBtn = document.getElementById("finishBtn");
+  const finishHint = document.getElementById("finishHint");
+  const statusBadge = document.getElementById("statusBadge");
+  const turnEl = document.getElementById("turn");
+  const textEl = document.getElementById("text");
+
+  let sending = false;
+
+  function scrollToBottom(){
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function addMsg(role, text, tagText){
+    const row = document.createElement("div");
+    row.className = "row " + (role === "user" ? "user" : "assistant");
+
+    if (role === "assistant") {
+      const tag = document.createElement("div");
+      tag.className = "tag";
+      tag.textContent = tagText || "assistant";
+      row.appendChild(tag);
+    }
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble" + (role === "system" ? " sys" : "");
+    bubble.textContent = text;
+
+    row.appendChild(bubble);
+    log.appendChild(row);
+    scrollToBottom();
+  }
+
+  function setTurn(n){
+    turnEl.textContent = String(n);
+    updateFinishState();
+    updateSendState();
+  }
+
+  function updateFinishState(){
+    const cur = parseInt(turnEl.textContent || "0", 10);
+    const canFinish = cur >= T1_THRESHOLD;
+    finishBtn.disabled = !canFinish;
+    finishHint.innerHTML = canFinish
+      ? `<span class="ok">✅ 已完成 ${T1_THRESHOLD} 轮对话，可以进入 T1。</span>`
+      : `<span class="warn">需要完成 ${T1_THRESHOLD} 轮对话后才能进入 T1。</span>`;
+  }
+
+  function updateSendState(){
+    const cur = parseInt(turnEl.textContent || "0", 10);
+    const reachedMax = cur >= MAX_TURNS;
+    sendBtn.disabled = sending || reachedMax;
+    document.querySelectorAll(".chip").forEach(btn=>{
+      btn.disabled = sending || reachedMax;
+    });
+
+    if (reachedMax){
+      statusBadge.innerHTML = `<span class="warn">已达到最大轮数（${MAX_TURNS}）。不能继续发送，但仍可进入 T1。</span>`;
+    } else {
+      statusBadge.innerHTML = sending ? `<span class="muted">发送中…</span>` : ``;
+    }
+  }
+
+  // ====== 初始引导（只加一次，避免重复）======
+  // 注意：这里不从后端拉历史记录，只做“开场白”。
+  // 如果你以后想回放历史，再加一个 /api/chat_history。
+  const initialTurn = parseInt(turnEl.textContent || "0", 10);
+  if (log.childElementCount === 0 && initialTurn === 0){
+    addMsg("assistant",
+      "我们开始吧。你现在最想从哪个点切入：载体、文化元素、故事/氛围，还是符号/颜色？",
+      "assistant"
+    );
+  }
+
+  async function sendText(text){
+    if (sending) return;
+    const cur = parseInt(turnEl.textContent || "0", 10);
+    if (cur >= MAX_TURNS){
+      updateSendState();
+      return;
+    }
+    const t = (text || "").trim();
+    if (!t) return;
+
+    sending = true;
+    updateSendState();
+
+    // 先把 user 显示出来（只显示一次）
+    addMsg("user", t);
+
+    try{
+      const resp = await fetch("/api/chat_send", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({participant_id: pid, text: t})
+      });
+
+      // 尽量读 JSON；如果后端异常返回了 HTML，也会被 catch 提示
+      let data = null;
+      const ct = (resp.headers.get("content-type") || "");
+      if (ct.includes("application/json")){
+        data = await resp.json();
+      } else {
+        const raw = await resp.text();
+        throw new Error("返回不是 JSON（可能后端报错返回了 HTML）: " + raw.slice(0,120));
+      }
+
+      if (!resp.ok || !data || data.ok !== true){
+        const err = (data && data.error) ? data.error : ("HTTP " + resp.status);
+        addMsg("system", "（系统）后端错误：" + err, "system");
+        // 如果是到达最大轮数，前端也要同步禁用发送
+        if (data && data.error === "max_turns_reached"){
+          setTurn(MAX_TURNS);
+        }
+        return;
+      }
+
+      // ✅ 只在这里 append 一次 assistant，避免重复
+      addMsg("assistant", data.assistant || "（assistant 无返回）", "assistant");
+
+      // ✅ 用后端返回的 turn_id 更新轮次（最稳）
+      if (typeof data.turn_id === "number"){
+        setTurn(data.turn_id);
+      } else {
+        // 兜底：+1
+        setTurn(cur + 1);
+      }
+
+    }catch(e){
+      addMsg("system", "（系统）网络/解析错误：" + (e && e.message ? e.message : String(e)), "system");
+    }finally{
+      sending = false;
+      updateSendState();
+      textEl.value = "";
+      textEl.focus();
+    }
+  }
+
+  // Enter 发送（Shift+Enter 换行）
+  textEl.addEventListener("keydown", (ev)=>{
+    if (ev.key === "Enter" && !ev.shiftKey){
+      ev.preventDefault();
+      sendText(textEl.value);
+    }
+  });
+
+  sendBtn.addEventListener("click", ()=>{
+    sendText(textEl.value);
+  });
+
+  // 快捷按钮：直接发送对应文本
+  document.querySelectorAll(".chip").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const t = btn.getAttribute("data-text") || btn.textContent;
+      sendText(t);
+    });
+  });
+
+  // 进入 T1：达到门槛即可
+  finishBtn.addEventListener("click", ()=>{
+    const cur = parseInt(turnEl.textContent || "0", 10);
+    if (cur < T1_THRESHOLD){
+      addMsg("system", `（系统）未达到 ${T1_THRESHOLD} 轮，暂不能进入 T1。`, "system");
+      return;
+    }
+    window.location.href = `/t1?pid=${encodeURIComponent(pid)}`;
+  });
+
+  // 初始化状态显示
+  updateFinishState();
+  updateSendState();
+})();
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
