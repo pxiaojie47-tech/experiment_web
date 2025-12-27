@@ -1,11 +1,3 @@
-import sqlite3
-import uuid
-import random
-from flask import jsonify
-from datetime import datetime
-from datetime import datetime, timedelta
-
-
 from flask import (
     Flask,
     render_template,
@@ -33,7 +25,7 @@ print(app.template_folder)
 
 app.secret_key = "dev"
 
-DB_PATH = os.path.join(BASE_DIR, "experiment.db")
+DB_PATH = "/data/experiment.db"
 MAX_TURNS = 20
 T1_THRESHOLD = 10
 
@@ -399,7 +391,7 @@ def generate_assistant_reply(planning_cond: str, feedback_cond: str, user_text: 
 # -------------------------
 
 
-T2_DELAY_DAYS = 7
+T2_DELAY_DAYS = 0
 
 def get_t2_eligibility(pid: str):
     """返回 (ok, eligible_at_iso, reason)"""
@@ -985,6 +977,7 @@ if __name__ == "__main__":
         port=int(os.environ.get("PORT", 5000)),
         debug=False
     )
+
 
 
 
