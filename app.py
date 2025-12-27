@@ -12,11 +12,11 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 # -------------------------
 DB_PATH = "/data/experiment.db"
 
-def db_conn():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON;")
-    return conn
+def init_db_inner(conn):
+    cur = conn.cursor()
+    cur.execute("""CREATE TABLE IF NOT EXISTS ...""")
+    conn.commit()
+
 
 def init_db():
     conn = db_conn()
@@ -42,8 +42,8 @@ app = Flask(
 )
 app.secret_key = os.environ.get("SECRET_KEY", "dev")
 
-# ✅ gunicorn / Railway 下也会执行建表
-init_db()
+# ❌ 这里不要再调用 init_db()
+
 
 
 print("=== TEMPLATE FOLDER ===")
@@ -957,12 +957,13 @@ def debug_counts():
 
 
 if __name__ == "__main__":
-    import os
     init_db()
     app.run(
         host="0.0.0.0",
         port=int(os.environ.get("PORT", 5000)),
         debug=False
+    )
+
     )
 
 
