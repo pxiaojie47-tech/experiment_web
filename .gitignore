@@ -2,3 +2,7 @@ venv/
 .env
 __pycache__/
 *.pyc
+*.db
+git add .gitignore
+git commit -m "ignore sqlite db"
+git push
