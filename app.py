@@ -1,6 +1,7 @@
 import sqlite3
 import uuid
 import random
+from flask import jsonify
 from datetime import datetime
 from datetime import datetime, timedelta
 
@@ -952,15 +953,39 @@ def t2_page():
 
     return render_template("done_t2.html", participant_id=pid)
 
+@app.route("/_admin_counts")
+@app.route("/_debug/counts")
+def debug_counts():
+    conn = sqlite3.connect("experiment.db")
+    cur = conn.cursor()
+
+    def q(sql):
+        cur.execute(sql)
+        return cur.fetchone()[0]
+
+    counts = {
+        "participants": q("SELECT COUNT(*) FROM participants;"),
+        "condition_assign": q("SELECT COUNT(*) FROM condition_assign;"),
+        "chat_log": q("SELECT COUNT(*) FROM chat_log;"),
+        "survey_t1": q("SELECT COUNT(*) FROM survey_t1;"),
+        "survey_t2": q("SELECT COUNT(*) FROM survey_t2;"),
+    }
+
+    conn.close()
+    return jsonify(counts)
+
+
 
 
 if __name__ == "__main__":
+    import os
     init_db()
     app.run(
         host="0.0.0.0",
-        port=5001,
-        debug=False   # ✅ 正式投放
+        port=int(os.environ.get("PORT", 5000)),
+        debug=False
     )
+
 
 
 
