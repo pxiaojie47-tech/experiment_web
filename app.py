@@ -1,48 +1,37 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
-import os
-import uuid
-import sqlite3
-import random
+import os, uuid, sqlite3, random
 from datetime import datetime, timedelta, timezone
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
-# -------------------------
-# DB config + helpers  ✅ 必须在 init_db() 调用之前
-# -------------------------
-DB_PATH = "/data/experiment.db"
-
-def init_db_inner(conn):
-    cur = conn.cursor()
-    cur.execute("""CREATE TABLE IF NOT EXISTS ...""")
-    conn.commit()
-
-
-def init_db():
-    conn = db_conn()
-    cur = conn.cursor()
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS participants (
-        participant_id TEXT PRIMARY KEY,
-        consent_time   TEXT,
-        created_at     TEXT NOT NULL
-    );
-    """)
-    # ... 你后面其它建表保持不变 ...
-    conn.commit()
-    conn.close()
-
-# -------------------------
-# Flask app ✅ 放在后面
-# -------------------------
 app = Flask(
     __name__,
     template_folder=os.path.join(BASE_DIR, "templates"),
     static_folder=os.path.join(BASE_DIR, "static"),
 )
-app.secret_key = os.environ.get("SECRET_KEY", "dev")
+app.secret_key = "dev"
 
-# ❌ 这里不要再调用 init_db()
+# -------------------------
+# DB helpers
+# -------------------------
+DB_PATH = "/data/experiment.db"
+
+def db_conn():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON;")
+    return conn
+
+def init_db():
+    conn = db_conn()
+    cur = conn.cursor()
+    # ... 你原来的建表代码全部保留 ...
+    conn.commit()
+    conn.close()
+
+# ✅ 注意：这里再调用（在函数定义之后）
+init_db()
+
 
 
 
@@ -962,8 +951,6 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=int(os.environ.get("PORT", 5000)),
         debug=False
-    )
-
     )
 
 
