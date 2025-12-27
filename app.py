@@ -10,7 +10,9 @@ from flask import (
 
 import os
 import uuid
-
+import sqlite3
+import random
+from datetime import datetime, timedelta, timezone
 
 
 
@@ -27,7 +29,7 @@ print(app.template_folder)
 
 app.secret_key = "dev"
 
-DB_PATH = "/data/experiment.db"
+conn = sqlite3.connect(DB_PATH)
 MAX_TURNS = 20
 T1_THRESHOLD = 10
 
@@ -724,43 +726,6 @@ def api_chat_send():
         }), 500
 
 
-
-        # ✅ 写入 user
-        cur.execute("""
-            INSERT INTO chat_log(participant_id, turn_id, role, text, ts)
-            VALUES (?, ?, 'user', ?, ?)
-        """, (pid, next_turn_id, user_text, now))
-
-        # ✅ 生成 assistant（最容易 500 的点：参数签名不匹配）
-        assistant_text = generate_assistant_reply(
-            planning_cond, feedback_cond, user_text, turn_id=next_turn_id
-        )
-
-        # ✅ 写入 assistant
-        cur.execute("""
-            INSERT INTO chat_log(participant_id, turn_id, role, text, ts)
-            VALUES (?, ?, 'assistant', ?, ?)
-        """, (pid, next_turn_id, assistant_text, datetime.utcnow().isoformat()))
-
-        conn.commit()
-        conn.close()
-
-        can_finish = (next_turn_id >= 10)
-        return jsonify({
-            "ok": True,
-            "turn_id": next_turn_id,
-            "assistant": assistant_text,
-            "can_finish": can_finish
-        })
-
-    except Exception as e:
-        # ✅ 关键：即使 500 也返回 JSON，这样前端不会再 “Unexpected token <”
-        import traceback
-        traceback.print_exc()
-        return jsonify({
-            "ok": False,
-            "error": f"{type(e).__name__}: {str(e)}"
-        }), 500
 
 
 @app.route("/t1", methods=["GET", "POST"])
