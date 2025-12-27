@@ -20,7 +20,7 @@ print(app.template_folder)
 # ✅ 先保证 Railway 能启动：默认写到 /app/experiment.db（可运行但不保证持久化）
 DB_PATH = os.environ.get("DB_PATH", "/tmp/experiment.db")
 
-ddef db_conn():
+def db_conn():
     # ✅ 确保 DB_PATH 的目录存在
     db_dir = os.path.dirname(DB_PATH)
     if db_dir:
