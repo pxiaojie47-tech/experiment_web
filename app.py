@@ -11,12 +11,21 @@ app = Flask(
 )
 app.secret_key = "dev"
 
+print("=== TEMPLATE FOLDER ===")
+print(app.template_folder)
+
 # -------------------------
 # DB helpers
 # -------------------------
-DB_PATH = "/data/experiment.db"
+# ✅ 先保证 Railway 能启动：默认写到 /app/experiment.db（可运行但不保证持久化）
+DB_PATH = os.environ.get("DB_PATH", os.path.join(BASE_DIR, "experiment.db"))
 
 def db_conn():
+    # ✅ 如果 DB_PATH 带目录（例如你以后用 /data/experiment.db），确保目录存在
+    db_dir = os.path.dirname(DB_PATH)
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
+
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON;")
@@ -25,12 +34,16 @@ def db_conn():
 def init_db():
     conn = db_conn()
     cur = conn.cursor()
-    # ... 你原来的建表代码全部保留 ...
+
+    # ✅ 你原来的建表代码全部保留，粘贴在这里（CREATE TABLE ...）
+    # ... 你原来的建表代码 ...
+
     conn.commit()
     conn.close()
 
-# ✅ 注意：这里再调用（在函数定义之后）
+# ✅ 一定要在函数定义之后再调用
 init_db()
+
 
 
 
