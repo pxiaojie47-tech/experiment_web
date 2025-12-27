@@ -18,10 +18,10 @@ print(app.template_folder)
 # DB helpers
 # -------------------------
 # ✅ 先保证 Railway 能启动：默认写到 /app/experiment.db（可运行但不保证持久化）
-DB_PATH = os.environ.get("DB_PATH", os.path.join(BASE_DIR, "experiment.db"))
+DB_PATH = os.environ.get("DB_PATH", "/tmp/experiment.db")
 
-def db_conn():
-    # ✅ 如果 DB_PATH 带目录（例如你以后用 /data/experiment.db），确保目录存在
+ddef db_conn():
+    # ✅ 确保 DB_PATH 的目录存在
     db_dir = os.path.dirname(DB_PATH)
     if db_dir:
         os.makedirs(db_dir, exist_ok=True)
@@ -30,6 +30,7 @@ def db_conn():
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON;")
     return conn
+
 
 def init_db():
     conn = db_conn()
@@ -937,7 +938,7 @@ def t2_page():
 @app.route("/_admin_counts")
 @app.route("/_debug/counts")
 def debug_counts():
-    conn = sqlite3.connect("experiment.db")
+    conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
 
     def q(sql):
