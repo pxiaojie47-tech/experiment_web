@@ -1,6 +1,7 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session, Response
 import os, uuid, sqlite3, random
 from datetime import datetime, timedelta
+import csv, io, zipfile
 
 # -------------------------
 # App setup
@@ -25,7 +26,7 @@ print(app.template_folder)
 MAX_TURNS = 20
 T1_THRESHOLD = 10
 
-# T2 延迟（你现在测试用 0；正式上线改成 7）
+# T2 延迟（测试用 0；正式上线改成 7）
 T2_DELAY_DAYS = int(os.environ.get("T2_DELAY_DAYS", "0"))
 
 # -------------------------
@@ -71,10 +72,7 @@ def init_db():
         FOREIGN KEY(participant_id) REFERENCES participants(participant_id)
     );
     """)
-    cur.execute("""
-    CREATE INDEX IF NOT EXISTS idx_baseline_pid
-    ON baseline(participant_id);
-    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_baseline_pid ON baseline(participant_id);")
 
     # 3) material_choice
     cur.execute("""
@@ -90,14 +88,8 @@ def init_db():
         FOREIGN KEY(participant_id) REFERENCES participants(participant_id)
     );
     """)
-    cur.execute("""
-    CREATE INDEX IF NOT EXISTS idx_material_choice_direction
-    ON material_choice(chosen_direction);
-    """)
-    cur.execute("""
-    CREATE INDEX IF NOT EXISTS idx_material_choice_pid
-    ON material_choice(participant_id);
-    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_material_choice_direction ON material_choice(chosen_direction);")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_material_choice_pid ON material_choice(participant_id);")
 
     # 4) condition_assign
     cur.execute("""
@@ -109,10 +101,7 @@ def init_db():
         FOREIGN KEY(participant_id) REFERENCES participants(participant_id)
     );
     """)
-    cur.execute("""
-    CREATE INDEX IF NOT EXISTS idx_condition_assign_pid
-    ON condition_assign(participant_id);
-    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_condition_assign_pid ON condition_assign(participant_id);")
 
     # 5) planning_input
     cur.execute("""
@@ -139,14 +128,8 @@ def init_db():
         FOREIGN KEY(participant_id) REFERENCES participants(participant_id)
     );
     """)
-    cur.execute("""
-    CREATE INDEX IF NOT EXISTS idx_chat_pid_turn
-    ON chat_log(participant_id, turn_id);
-    """)
-    cur.execute("""
-    CREATE INDEX IF NOT EXISTS idx_chat_pid_role
-    ON chat_log(participant_id, role);
-    """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_chat_pid_turn ON chat_log(participant_id, turn_id);")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_chat_pid_role ON chat_log(participant_id, role);")
 
     # 7) survey_t1
     cur.execute("""
@@ -187,7 +170,6 @@ def init_db():
 # ✅ 只调用一次：在定义后、路由前
 init_db()
 
-
 # -------------------------
 # pid helper：URL 优先，其次 session
 # -------------------------
@@ -204,7 +186,6 @@ def get_pid_from_request():
 def get_or_assign_condition(participant_id: str):
     conn = db_conn()
     cur = conn.cursor()
-
     try:
         cur.execute("BEGIN IMMEDIATE;")
 
@@ -375,6 +356,19 @@ def get_t2_eligibility(pid: str):
         return (False, eligible_at.isoformat(), "too_early")
 
     return (True, eligible_at.isoformat(), "ok")
+
+
+# -------------------------
+# Export helpers (token)
+# -------------------------
+def require_export_token():
+    token_env = os.environ.get("EXPORT_TOKEN", "").strip()
+    if not token_env:
+        return None  # 未设置则不要求（不推荐）
+    token = (request.args.get("token") or "").strip()
+    if token != token_env:
+        return ("Forbidden", 403)
+    return None
 
 
 # -------------------------
@@ -711,7 +705,8 @@ def t1_page():
         affect_2=excluded.affect_2,
         affect_3=excluded.affect_3,
         manip_plan=excluded.manip_plan,
-        manip_feedback=excluded.manip_feedback
+        manip_feedback=excluded.manip_feedback,
+        created_at=excluded.created_at
     """, payload)
     conn.commit()
     conn.close()
@@ -769,7 +764,8 @@ def t2_page():
         clarity_1=excluded.clarity_1,
         clarity_2=excluded.clarity_2,
         clarity_3=excluded.clarity_3,
-        cont_intent_1=excluded.cont_intent_1
+        cont_intent_1=excluded.cont_intent_1,
+        created_at=excluded.created_at
     """, payload)
     conn.commit()
     conn.close()
@@ -777,7 +773,9 @@ def t2_page():
     return render_template("done_t2.html", participant_id=pid)
 
 
-@app.route("/_admin_counts")
+# -------------------------
+# Debug counts
+# -------------------------
 @app.route("/_debug/counts")
 def debug_counts():
     conn = db_conn()
@@ -790,6 +788,9 @@ def debug_counts():
     counts = {
         "participants": q("SELECT COUNT(*) FROM participants;"),
         "condition_assign": q("SELECT COUNT(*) FROM condition_assign;"),
+        "baseline": q("SELECT COUNT(*) FROM baseline;"),
+        "material_choice": q("SELECT COUNT(*) FROM material_choice;"),
+        "planning_input": q("SELECT COUNT(*) FROM planning_input;"),
         "chat_log": q("SELECT COUNT(*) FROM chat_log;"),
         "survey_t1": q("SELECT COUNT(*) FROM survey_t1;"),
         "survey_t2": q("SELECT COUNT(*) FROM survey_t2;"),
@@ -799,12 +800,132 @@ def debug_counts():
     return jsonify(counts)
 
 
+# -------------------------
+# Export: single table (CSV)
+#   /_export/survey_t1?token=xxx
+# -------------------------
+@app.route("/_export/<table_name>")
+def export_table(table_name):
+    denied = require_export_token()
+    if denied:
+        return denied
+
+    ALLOWED = {
+        "participants",
+        "condition_assign",
+        "baseline",
+        "material_choice",
+        "planning_input",
+        "survey_t1",
+        "survey_t2",
+        "chat_log",
+    }
+    if table_name not in ALLOWED:
+        return "Table not allowed", 403
+
+    def generate_csv():
+        conn = db_conn()
+        cur = conn.cursor()
+        cur.execute(f"SELECT * FROM {table_name}")
+        cols = [d[0] for d in cur.description]
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+
+        # Excel 友好：BOM
+        yield "\ufeff"
+        writer.writerow(cols)
+        yield output.getvalue()
+        output.seek(0); output.truncate(0)
+
+        while True:
+            rows = cur.fetchmany(2000)
+            if not rows:
+                break
+            for r in rows:
+                writer.writerow(list(r))
+                yield output.getvalue()
+                output.seek(0); output.truncate(0)
+
+        conn.close()
+
+    return Response(
+        generate_csv(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={table_name}.csv"},
+    )
+
+
+# -------------------------
+# Export: all tables as ZIP
+#   /_export_all?token=xxx
+# -------------------------
+@app.route("/_export_all")
+def export_all_tables_zip():
+    denied = require_export_token()
+    if denied:
+        return denied
+
+    tables = [
+        "participants",
+        "condition_assign",
+        "baseline",
+        "material_choice",
+        "planning_input",
+        "chat_log",
+        "survey_t1",
+        "survey_t2",
+    ]
+
+    def table_to_csv_bytes(conn, table_name: str) -> bytes:
+        cur = conn.cursor()
+        cur.execute(f"SELECT * FROM {table_name}")
+        cols = [d[0] for d in cur.description]
+
+        s = io.StringIO()
+        w = csv.writer(s)
+        w.writerow(cols)
+
+        while True:
+            rows = cur.fetchmany(2000)
+            if not rows:
+                break
+            for r in rows:
+                w.writerow(list(r))
+
+        # Excel 友好：utf-8-sig
+        return s.getvalue().encode("utf-8-sig")
+
+    conn = db_conn()
+    mem_zip = io.BytesIO()
+    try:
+        with zipfile.ZipFile(mem_zip, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+            for t in tables:
+                try:
+                    zf.writestr(f"{t}.csv", table_to_csv_bytes(conn, t))
+                except Exception as e:
+                    zf.writestr(f"{t}__ERROR.txt", f"{type(e).__name__}: {str(e)}\n".encode("utf-8"))
+    finally:
+        conn.close()
+
+    mem_zip.seek(0)
+    return Response(
+        mem_zip.getvalue(),
+        mimetype="application/zip",
+        headers={"Content-Disposition": "attachment; filename=experiment_export.zip"},
+    )
+
+
 if __name__ == "__main__":
+    # Railway 不走这里，但本地跑会走
+    init_db()
     app.run(
         host="0.0.0.0",
         port=int(os.environ.get("PORT", 5000)),
         debug=False
     )
+
+
 
 
 
