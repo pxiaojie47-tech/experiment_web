@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session, Response
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session, Response, abort
 import os, uuid, sqlite3, random
 from datetime import datetime, timedelta
 import csv, io, zipfile
@@ -167,7 +167,7 @@ def init_db():
     conn.close()
 
 
-# ✅ 只调用一次：在定义后、路由前
+# ✅ 只调用一次：在定义后、路由前（Railway gunicorn 启动也会执行这里）
 init_db()
 
 # -------------------------
@@ -181,11 +181,28 @@ def get_pid_from_request():
 
 
 # -------------------------
+# Export token guard (强制必须设置)
+# -------------------------
+def require_export_token_or_403():
+    token_env = os.environ.get("EXPORT_TOKEN", "").strip()
+    if not token_env:
+        # 强制要求配置，否则直接拒绝（避免你忘了配导致全网可导出）
+        return Response("EXPORT_TOKEN is not set on server", status=500)
+
+    token = (request.args.get("token") or "").strip()
+    if token != token_env:
+        return Response("Forbidden", status=403)
+
+    return None
+
+
+# -------------------------
 # Condition assignment (Quota)
 # -------------------------
 def get_or_assign_condition(participant_id: str):
     conn = db_conn()
     cur = conn.cursor()
+
     try:
         cur.execute("BEGIN IMMEDIATE;")
 
@@ -257,7 +274,7 @@ def generate_assistant_reply(planning_cond: str, feedback_cond: str, user_text: 
         7: "（聚焦反馈）确定视觉锚点：你希望突出“图形符号”还是“故事画面”？二选一。",
         8: "（聚焦反馈）来一句话概念（15字以内）：用“把___变成___”的句式写一下，我帮你润色。",
         9: "（聚焦反馈）最后校验风格：你希望整体更“现代极简”还是“传统丰富”？二选一。",
-        10:"（聚焦反馈）总结一下：\n- 载体：{carrier}\n- 受众/场景：{aud}\n- 核心元素：{elem}\n- 气质：{adj}\n- 概念句：{concept}\n\n如果你同意，建议下一步：①列3个参考 ②画2版构图草图。"
+        10: "（聚焦反馈）总结一下：\n- 载体：{carrier}\n- 受众/场景：{aud}\n- 核心元素：{elem}\n- 气质：{adj}\n- 概念句：{concept}\n\n如果你同意，建议下一步：①列3个参考 ②画2版构图草图。"
     }
 
     generic_1_10 = {
@@ -270,33 +287,33 @@ def generate_assistant_reply(planning_cond: str, feedback_cond: str, user_text: 
         7: "（通用反馈）更想突出“图形符号”还是“故事画面”？",
         8: "（通用反馈）写一句 15 字以内的概念句（“把___变成___”）。",
         9: "（通用反馈）更偏“现代极简”还是“传统丰富”？",
-        10:"（通用反馈）我们把要点收一下：载体/受众/元素/气质/概念句。下一步建议做参考收集+草图。"
+        10: "（通用反馈）我们把要点收一下：载体/受众/元素/气质/概念句。下一步建议做参考收集+草图。"
     }
 
     focused_11_20 = {
-        11:"（反思阶段）我们退一步看整体：你觉得目前概念里最清晰的一点是什么？（一句话）",
-        12:"（反思阶段）那最模糊/最不确定的一点是什么？（一句话）",
-        13:"（反思阶段）如果让它更可落地：你愿意优先改“内容表达”还是“形式呈现”？二选一。",
-        14:"（反思阶段）给它一个明确的核心信息（10–15字）：你希望观众看完记住什么？",
-        15:"（反思阶段）做一次风险检查：最可能被误解的地方是什么？你想怎么避免？",
-        16:"（反思阶段）给 3 个关键词作为设计约束（例如：材质/色彩/符号风格）。你给哪 3 个？",
-        17:"（反思阶段）请列 2 个你想参考的方向（品牌/作品类型/风格流派都行），为什么？",
-        18:"（反思阶段）如果把它做成 A/B 两个版本：A更传统，B更当代。你更想保留哪一点不变？",
-        19:"（反思阶段）自评一下：现在你对这个方案的清晰度从 1–7 你给几分？为什么？",
-        20:"（反思阶段）最后收束：①你下一步最可执行的一件事是什么？②你希望我继续帮你做“润色概念句”还是“拆成制作清单”？"
+        11: "（反思阶段）我们退一步看整体：你觉得目前概念里最清晰的一点是什么？（一句话）",
+        12: "（反思阶段）那最模糊/最不确定的一点是什么？（一句话）",
+        13: "（反思阶段）如果让它更可落地：你愿意优先改“内容表达”还是“形式呈现”？二选一。",
+        14: "（反思阶段）给它一个明确的核心信息（10–15字）：你希望观众看完记住什么？",
+        15: "（反思阶段）做一次风险检查：最可能被误解的地方是什么？你想怎么避免？",
+        16: "（反思阶段）给 3 个关键词作为设计约束（例如：材质/色彩/符号风格）。你给哪 3 个？",
+        17: "（反思阶段）请列 2 个你想参考的方向（品牌/作品类型/风格流派都行），为什么？",
+        18: "（反思阶段）如果把它做成 A/B 两个版本：A更传统，B更当代。你更想保留哪一点不变？",
+        19: "（反思阶段）自评一下：现在你对这个方案的清晰度从 1–7 你给几分？为什么？",
+        20: "（反思阶段）最后收束：①你下一步最可执行的一件事是什么？②你希望我继续帮你做“润色概念句”还是“拆成制作清单”？"
     }
 
     generic_11_20 = {
-        11:"（反思）你觉得现在最清楚的一点是什么？（一句话）",
-        12:"（反思）你觉得最不确定的一点是什么？（一句话）",
-        13:"（反思）想继续完善的话，你更想改内容还是改形式？",
-        14:"（反思）用 10–15 字写一句核心信息：你希望观众记住什么？",
-        15:"（反思）你担心它会被怎么误解？",
-        16:"（反思）给 3 个关键词当作约束（材质/色彩/符号风格）。",
-        17:"（反思）列 2 个你想参考的方向，并说原因。",
-        18:"（反思）如果做 A/B 两版（传统/当代），你更想保留什么不变？",
-        19:"（反思）你对现在方案清晰度 1–7 给几分？为什么？",
-        20:"（反思）最后：你下一步最可执行的一件事是什么？"
+        11: "（反思）你觉得现在最清楚的一点是什么？（一句话）",
+        12: "（反思）你觉得最不确定的一点是什么？（一句话）",
+        13: "（反思）想继续完善的话，你更想改内容还是改形式？",
+        14: "（反思）用 10–15 字写一句核心信息：你希望观众记住什么？",
+        15: "（反思）你担心它会被怎么误解？",
+        16: "（反思）给 3 个关键词当作约束（材质/色彩/符号风格）。",
+        17: "（反思）列 2 个你想参考的方向，并说原因。",
+        18: "（反思）如果做 A/B 两版（传统/当代），你更想保留什么不变？",
+        19: "（反思）你对现在方案清晰度 1–7 给几分？为什么？",
+        20: "（反思）最后：你下一步最可执行的一件事是什么？"
     }
 
     # session 记忆（用于第10轮填空）
@@ -323,7 +340,6 @@ def generate_assistant_reply(planning_cond: str, feedback_cond: str, user_text: 
                 )
             return focused_1_10.get(t, "（聚焦反馈）继续说说你的想法，我来帮你推进。")
         return focused_11_20.get(t, "（反思阶段）你愿意补充一句：你现在最想把哪一点变得更清楚？")
-
     else:
         if t <= 10:
             return generic_1_10.get(t, "（通用反馈）继续说说你的想法，我来帮你推进。")
@@ -356,19 +372,6 @@ def get_t2_eligibility(pid: str):
         return (False, eligible_at.isoformat(), "too_early")
 
     return (True, eligible_at.isoformat(), "ok")
-
-
-# -------------------------
-# Export helpers (token)
-# -------------------------
-def require_export_token():
-    token_env = os.environ.get("EXPORT_TOKEN", "").strip()
-    if not token_env:
-        return None  # 未设置则不要求（不推荐）
-    token = (request.args.get("token") or "").strip()
-    if token != token_env:
-        return ("Forbidden", 403)
-    return None
 
 
 # -------------------------
@@ -426,7 +429,8 @@ def baseline_page():
         grade_major=excluded.grade_major,
         culture_course=excluded.culture_course,
         chatbot_exp=excluded.chatbot_exp,
-        stress_1w=excluded.stress_1w
+        stress_1w=excluded.stress_1w,
+        created_at=excluded.created_at
     """, (pid, grade_major, culture_course, chatbot_exp, stress_1w, datetime.utcnow().isoformat()))
     conn.commit()
     conn.close()
@@ -456,7 +460,8 @@ def api_baseline():
         grade_major=excluded.grade_major,
         culture_course=excluded.culture_course,
         chatbot_exp=excluded.chatbot_exp,
-        stress_1w=excluded.stress_1w
+        stress_1w=excluded.stress_1w,
+        created_at=excluded.created_at
     """, (pid, grade_major, culture_course, chatbot_exp, stress_1w, datetime.utcnow().isoformat()))
     conn.commit()
     conn.close()
@@ -537,7 +542,8 @@ def planning_page():
         plan_goal=excluded.plan_goal,
         plan_audience_context=excluded.plan_audience_context,
         plan_elements=excluded.plan_elements,
-        plan_output=excluded.plan_output
+        plan_output=excluded.plan_output,
+        created_at=excluded.created_at
     """, (pid, plan_goal, plan_audience_context, plan_elements, plan_output, datetime.utcnow().isoformat()))
     conn.commit()
     conn.close()
@@ -806,7 +812,7 @@ def debug_counts():
 # -------------------------
 @app.route("/_export/<table_name>")
 def export_table(table_name):
-    denied = require_export_token()
+    denied = require_export_token_or_403()
     if denied:
         return denied
 
@@ -836,7 +842,8 @@ def export_table(table_name):
         yield "\ufeff"
         writer.writerow(cols)
         yield output.getvalue()
-        output.seek(0); output.truncate(0)
+        output.seek(0)
+        output.truncate(0)
 
         while True:
             rows = cur.fetchmany(2000)
@@ -845,7 +852,8 @@ def export_table(table_name):
             for r in rows:
                 writer.writerow(list(r))
                 yield output.getvalue()
-                output.seek(0); output.truncate(0)
+                output.seek(0)
+                output.truncate(0)
 
         conn.close()
 
@@ -862,7 +870,7 @@ def export_table(table_name):
 # -------------------------
 @app.route("/_export_all")
 def export_all_tables_zip():
-    denied = require_export_token()
+    denied = require_export_token_or_403()
     if denied:
         return denied
 
@@ -893,7 +901,6 @@ def export_all_tables_zip():
             for r in rows:
                 w.writerow(list(r))
 
-        # Excel 友好：utf-8-sig
         return s.getvalue().encode("utf-8-sig")
 
     conn = db_conn()
@@ -913,16 +920,6 @@ def export_all_tables_zip():
         mem_zip.getvalue(),
         mimetype="application/zip",
         headers={"Content-Disposition": "attachment; filename=experiment_export.zip"},
-    )
-
-
-if __name__ == "__main__":
-    # Railway 不走这里，但本地跑会走
-    init_db()
-    app.run(
-        host="0.0.0.0",
-        port=int(os.environ.get("PORT", 5000)),
-        debug=False
     )
 
 
